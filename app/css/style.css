@@ -265,19 +265,7 @@ html, body {
   background: var(--accent-hover);
 }
 
-.iframe-error {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  text-align: center;
-  color: var(--text-secondary);
-}
 
-.iframe-error p {
-  margin-bottom: 12px;
-  font-size: 16px;
-}
 
 .modal {
   position: fixed;
