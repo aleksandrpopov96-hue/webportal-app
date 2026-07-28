@@ -8,6 +8,70 @@ class ProxyHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         pass
 
+    def proxy_fetch(self, url):
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        req = urllib.request.Request(url)
+        req.add_header('User-Agent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36')
+        req.add_header('Accept', '*/*')
+        req.add_header('Accept-Language', 'en-US,en;q=0.5')
+        return urllib.request.urlopen(req, timeout=15, context=ctx)
+
+    def encode_url(self, url):
+        return '/proxy?url=' + urllib.parse.quote(url, safe='')
+
+    def rewrite_html(self, html, origin):
+        def rewrite_attr(match):
+            prefix = match.group(1)
+            quote = match.group(2)
+            val = match.group(3)
+            if val.startswith('/proxy?') or val.startswith('http') or val.startswith('data:') or val.startswith('#') or val.startswith('javascript:'):
+                return match.group(0)
+            if val.startswith('//'):
+                return match.group(0)
+            if val.startswith('/'):
+                full = origin + val
+            else:
+                full = origin + '/' + val
+            return prefix + quote + self.encode_url(full) + quote
+
+        html = re.sub(r'((?:href|src|action|poster|srcset)\s*=\s*)(["\'])(/[^"\']*?)\2', rewrite_attr, html, flags=re.IGNORECASE)
+
+        def rewrite_style(match):
+            prefix = match.group(1)
+            val = match.group(2)
+            if val.startswith('/proxy?') or val.startswith('http') or val.startswith('data:'):
+                return match.group(0)
+            if val.startswith('//'):
+                return match.group(0)
+            if val.startswith('/'):
+                full = origin + val
+            else:
+                return match.group(0)
+            return prefix + self.encode_url(full)
+
+        html = re.sub(r'((?:href)\s*=\s*)(["\'])(https?://[^"\']*?)\2', lambda m: m.group(0) if not any(d in m.group(3) for d in [urllib.parse.urlparse(origin).hostname]) else m.group(1) + m.group(2) + self.encode_url(m.group(3)) + m.group(2), html, flags=re.IGNORECASE)
+
+        html = re.sub(r'url\(\s*["\']?\s*(/[^)"\']*)\s*["\']?\s*\)', lambda m: 'url(' + self.encode_url(origin + m.group(1)) + ')', html)
+
+        return html
+
+    def rewrite_css(self, css, origin):
+        def rewrite_url(match):
+            val = match.group(1)
+            if val.startswith('/proxy?') or val.startswith('http') or val.startswith('data:'):
+                return match.group(0)
+            if val.startswith('//'):
+                return match.group(0)
+            if val.startswith('/'):
+                full = origin + val
+            else:
+                return match.group(0)
+            return 'url(' + self.encode_url(full) + ')'
+
+        return re.sub(r'url\(\s*["\']?\s*([^)"\']*)\s*["\']?\s*\)', rewrite_url, css)
+
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
         params = urllib.parse.parse_qs(parsed.query)
@@ -20,34 +84,28 @@ class ProxyHandler(BaseHTTPRequestHandler):
             return
 
         try:
-            ctx = ssl.create_default_context()
-            ctx.check_hostname = False
-            ctx.verify_mode = ssl.CERT_NONE
-
-            req = urllib.request.Request(url)
-            req.add_header('User-Agent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36')
-            req.add_header('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8')
-            req.add_header('Accept-Language', 'en-US,en;q=0.5')
-            resp = urllib.request.urlopen(req, timeout=15, context=ctx)
+            resp = self.proxy_fetch(url)
             content = resp.read()
             content_type = ''
-
             for key, val in resp.getheaders():
                 if key.lower() == 'content-type':
-                    content_type = val
+                    content_type = val.lower()
+
+            parsed_url = urllib.parse.urlparse(url)
+            origin = parsed_url.scheme + '://' + parsed_url.netloc
 
             if 'text/html' in content_type:
                 html = content.decode('utf-8', errors='replace')
-                base_url = url.rstrip('/') + '/'
-                if '<head>' in html:
-                    html = html.replace('<head>', '<head><base href="' + base_url + '">', 1)
-                elif '<HEAD>' in html:
-                    html = html.replace('<HEAD>', '<HEAD><base href="' + base_url + '">', 1)
+                html = self.rewrite_html(html, origin)
                 content = html.encode('utf-8')
+            elif 'text/css' in content_type:
+                css = content.decode('utf-8', errors='replace')
+                css = self.rewrite_css(css, origin)
+                content = css.encode('utf-8')
 
             self.send_response(resp.getcode())
             skip = {'x-frame-options', 'content-security-policy', 'x-xss-protection',
-                     'transfer-encoding', 'content-encoding', 'connection'}
+                     'transfer-encoding', 'connection'}
             for key, val in resp.getheaders():
                 if key.lower() not in skip:
                     self.send_header(key, val)
