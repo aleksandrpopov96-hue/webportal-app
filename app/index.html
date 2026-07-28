@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Web Portal</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="container">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <h2>Web Portal</h2>
+        <button class="toggle-btn" id="toggleSidebar">&#9776;</button>
+      </div>
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Search sites..." />
+      </div>
+      <ul class="site-list" id="siteList"></ul>
+      <div class="sidebar-footer">
+        <button class="manage-btn" id="manageBtn">Manage Sites</button>
+      </div>
+    </aside>
+    <main class="content">
+      <div class="iframe-container" id="iframeContainer">
+        <div class="welcome" id="welcome">
+          <h1>Welcome to Web Portal</h1>
+          <p>Select a site from the sidebar or add your own.</p>
+        </div>
+        <iframe id="siteFrame" class="site-frame" sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-modals" style="display:none;"></iframe>
+      </div>
+    </main>
+  </div>
+
+  <div class="modal" id="manageModal" style="display:none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Manage Sites</h3>
+        <button class="close-btn" id="closeModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="addSiteForm">
+          <input type="hidden" id="editIndex" value="-1" />
+          <div class="form-group">
+            <label for="siteName">Name</label>
+            <input type="text" id="siteName" required />
+          </div>
+          <div class="form-group">
+            <label for="siteUrl">URL</label>
+            <input type="url" id="siteUrl" required placeholder="https://example.com" />
+          </div>
+          <div class="form-group">
+            <label for="siteIcon">Icon (emoji or text)</label>
+            <input type="text" id="siteIcon" placeholder="e.g. &#127760; or a letter" />
+          </div>
+          <div class="form-group">
+            <label for="siteCategory">Category</label>
+            <input type="text" id="siteCategory" placeholder="e.g. Media, Tools, Admin" />
+          </div>
+          <button type="submit" class="save-btn" id="saveBtn">Add Site</button>
+        </form>
+        <hr />
+        <h4>Saved Sites</h4>
+        <ul class="saved-list" id="savedList"></ul>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>

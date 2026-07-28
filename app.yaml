@@ -1,0 +1,22 @@
+name: webportal
+title: Web Portal
+icon: /mnt/.ix-applications/webportal/icon.png
+version: 1.0.0
+app_version: "1.0.0"
+description: A customizable web portal that embeds external websites via iframes.
+  Easily add, organize, and access your favorite web services from one place.
+keywords:
+  - web portal
+  - iframe
+  - dashboard
+  - links
+  - aggregator
+maintainers:
+  - name: WebPortal
+    email: admin@example.com
+sources:
+  - https://github.com/your-repo/webportal
+run_as_context:
+  - description: WebPortal runs as root user
+    uid: 0
+host_mounts: []

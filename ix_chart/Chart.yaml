@@ -1,0 +1,6 @@
+apiVersion: v2
+name: webportal
+description: A web portal that embeds external websites via iframes
+type: application
+version: 1.0.0
+appVersion: "1.0.0"

@@ -1,0 +1,13 @@
+version: "3.8"
+
+services:
+  webportal:
+    build: .
+    container_name: webportal
+    restart: unless-stopped
+    ports:
+      - "${WEBPORTAL_PORT:-8080}:80"
+    volumes:
+      - ${WEBPORTAL_CONFIG:-./config}:/config
+    environment:
+      - TZ=${TZ:-UTC}

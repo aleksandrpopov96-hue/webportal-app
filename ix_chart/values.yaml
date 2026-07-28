@@ -1,0 +1,20 @@
+image:
+  repository: webportal
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 80
+
+webportal:
+  port: 8080
+  configDir: /config
+  timezone: UTC
+
+persistence:
+  config:
+    enabled: true
+    type: hostPath
+    hostPath: /mnt/.ix-applications/webportal/config
+    mountPath: /config
