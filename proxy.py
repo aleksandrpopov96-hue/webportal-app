@@ -2,6 +2,7 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 import urllib.request
 import urllib.parse
 import ssl
+import re
 
 class ProxyHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
@@ -29,6 +30,20 @@ class ProxyHandler(BaseHTTPRequestHandler):
             req.add_header('Accept-Language', 'en-US,en;q=0.5')
             resp = urllib.request.urlopen(req, timeout=15, context=ctx)
             content = resp.read()
+            content_type = ''
+
+            for key, val in resp.getheaders():
+                if key.lower() == 'content-type':
+                    content_type = val
+
+            if 'text/html' in content_type:
+                html = content.decode('utf-8', errors='replace')
+                base_url = url.rstrip('/') + '/'
+                if '<head>' in html:
+                    html = html.replace('<head>', '<head><base href="' + base_url + '">', 1)
+                elif '<HEAD>' in html:
+                    html = html.replace('<HEAD>', '<HEAD><base href="' + base_url + '">', 1)
+                content = html.encode('utf-8')
 
             self.send_response(resp.getcode())
             skip = {'x-frame-options', 'content-security-policy', 'x-xss-protection',
