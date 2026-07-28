@@ -28,7 +28,7 @@
   const sidebar = document.getElementById('sidebar');
 
   function proxyUrl(url) {
-    return '/proxy/?url=' + encodeURIComponent(url);
+    return '/proxy/' + url;
   }
 
   function loadSites() {
