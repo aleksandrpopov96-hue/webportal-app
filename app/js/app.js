@@ -15,6 +15,11 @@
   const siteList = document.getElementById('siteList');
   const siteFrame = document.getElementById('siteFrame');
   const welcome = document.getElementById('welcome');
+  const toolbar = document.getElementById('toolbar');
+  const toolbarTitle = document.getElementById('toolbarTitle');
+  const openNewTab = document.getElementById('openNewTab');
+  const iframeError = document.getElementById('iframeError');
+  const errorOpenTab = document.getElementById('errorOpenTab');
   const searchInput = document.getElementById('searchInput');
   const manageBtn = document.getElementById('manageBtn');
   const manageModal = document.getElementById('manageModal');
@@ -102,10 +107,45 @@
     const site = sites[index];
     if (!site) return;
     activeIndex = index;
+
     welcome.style.display = 'none';
+    iframeError.style.display = 'none';
+    toolbar.style.display = 'flex';
+    toolbarTitle.textContent = site.name + ' \u2014 ' + site.url;
+    openNewTab.href = site.url;
+    errorOpenTab.href = site.url;
+
     siteFrame.style.display = 'block';
     siteFrame.src = site.url;
+
+    siteFrame.onload = function() {
+      try {
+        var h = siteFrame.contentWindow.document.body.innerHTML;
+        if (!h || h.trim() === '') {
+          showIframeError();
+        }
+      } catch(e) {
+        // Cross-origin - site loaded fine
+      }
+    };
+
+    setTimeout(function() {
+      if (siteFrame.style.display === 'block' && welcome.style.display === 'none') {
+        try {
+          var h = siteFrame.contentWindow.document.body.innerHTML;
+          if (!h || h.trim() === '') {
+            showIframeError();
+          }
+        } catch(e) {}
+      }
+    }, 5000);
+
     renderSites(searchInput.value);
+  }
+
+  function showIframeError() {
+    siteFrame.style.display = 'none';
+    iframeError.style.display = 'block';
   }
 
   function editSite(index) {
@@ -125,6 +165,8 @@
     if (activeIndex === index) {
       activeIndex = -1;
       siteFrame.style.display = 'none';
+      toolbar.style.display = 'none';
+      iframeError.style.display = 'none';
       welcome.style.display = 'block';
     } else if (activeIndex > index) {
       activeIndex--;
