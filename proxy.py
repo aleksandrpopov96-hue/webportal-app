@@ -21,6 +21,27 @@ class ProxyHandler(BaseHTTPRequestHandler):
     def encode_url(self, url):
         return '/proxy?url=' + urllib.parse.quote(url, safe='')
 
+    def get_nav_script(self, origin):
+        return (
+            '<script>'
+            '(function(){'
+            'var O="' + origin + '",P="/proxy?url=";'
+            'function p(u){return u.indexOf(P)===0?u:P+encodeURIComponent(u)}'
+            'document.addEventListener("click",function(e){'
+            'var a=e.target.closest("a");'
+            'if(!a||!a.href||a.protocol==="javascript:")return;'
+            'var h=a.href;'
+            'if(a.getAttribute("target")==="_blank")return;'
+            'if(h.indexOf(O)===0){'
+            'e.preventDefault();location.href=p(h)'
+            '}else if(h.indexOf(location.origin)===0&&h.indexOf(P)!==0){'
+            'e.preventDefault();location.href=p(h)'
+            '}'
+            '})'
+            '})()'
+            '</script>'
+        )
+
     def rewrite_html(self, html, origin):
         def rewrite_attr(match):
             prefix = match.group(1)
@@ -38,22 +59,10 @@ class ProxyHandler(BaseHTTPRequestHandler):
 
         html = re.sub(r'((?:href|src|action|poster|srcset)\s*=\s*)(["\'])(/[^"\']*?)\2', rewrite_attr, html, flags=re.IGNORECASE)
 
-        def rewrite_style(match):
-            prefix = match.group(1)
-            val = match.group(2)
-            if val.startswith('/proxy?') or val.startswith('http') or val.startswith('data:'):
-                return match.group(0)
-            if val.startswith('//'):
-                return match.group(0)
-            if val.startswith('/'):
-                full = origin + val
-            else:
-                return match.group(0)
-            return prefix + self.encode_url(full)
-
-        html = re.sub(r'((?:href)\s*=\s*)(["\'])(https?://[^"\']*?)\2', lambda m: m.group(0) if not any(d in m.group(3) for d in [urllib.parse.urlparse(origin).hostname]) else m.group(1) + m.group(2) + self.encode_url(m.group(3)) + m.group(2), html, flags=re.IGNORECASE)
-
         html = re.sub(r'url\(\s*["\']?\s*(/[^)"\']*)\s*["\']?\s*\)', lambda m: 'url(' + self.encode_url(origin + m.group(1)) + ')', html)
+
+        nav_script = self.get_nav_script(origin)
+        html = html.replace('</head>', nav_script + '</head>', 1)
 
         return html
 
